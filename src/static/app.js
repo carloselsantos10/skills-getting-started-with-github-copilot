@@ -21,21 +21,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft = details.max_participants - details.participants.length;
 
         // Participants section
-        let participantsHTML = `
-          <div class="participants-section">
+        let participantsHTML = `<div class="participants-section">
             <strong>Participantes:</strong>
             ${
               details.participants.length > 0
-                ? `<ul>${details.participants
+                ? `<ul style="list-style-type: none; padding-left: 0;">${details.participants
                     .map(
                       (email) =>
-                        `<li><span class="participant-email">${email}</span></li>`
+                        `<li style="display: flex; align-items: center; margin-bottom: 3px;">
+                          <span class="participant-email">${email}</span>
+                          <button class="delete-participant-btn" title="Remover participante" data-activity="${name}" data-email="${email}" style="margin-left: 8px; background: none; border: none; cursor: pointer; font-size: 1em;">🗑️</button>
+                        </li>`
                     )
                     .join("")}</ul>`
                 : `<div class="no-participants">Nenhum participante inscrito ainda.</div>`
             }
-          </div>
-        `;
+          </div>`;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
@@ -52,6 +53,30 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+
+      // Adiciona evento para botões de exclusão
+      document.querySelectorAll('.delete-participant-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const activity = btn.getAttribute('data-activity');
+          const email = btn.getAttribute('data-email');
+          if (confirm(`Remover ${email} de ${activity}?`)) {
+            try {
+              const response = await fetch(`/activities/${encodeURIComponent(activity)}/remove?email=${encodeURIComponent(email)}`, {
+                method: 'DELETE',
+              });
+              if (response.ok) {
+                // Recarrega as atividades para atualizar a lista
+                fetchActivities();
+              } else {
+                const result = await response.json();
+                alert(result.detail || 'Erro ao remover participante.');
+              }
+            } catch (error) {
+              alert('Erro ao remover participante.');
+            }
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
@@ -80,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Atualiza a lista de atividades/participantes
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
